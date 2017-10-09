@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Filmes</title>
+    <link rel="stylesheet" href="css/dc.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/crossfilter.js" charset="utf-8"></script>
+    <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <script src="js/dc.js" charset="utf-8"></script>
+</head>
+
+<h1>Bilheterias: Apuração por ano</h1>
+<div id="ano"class="chart_container" ></div>
+<h1>Bilheterias: Apuração por genero </h1>
+<div id="gen"class="chart_container" ></div>
+
+
+<script type="text/javascript">
+    var ano  = dc.barChart('#ano');
+    var gen  = dc.barChart('#gen');
+    
+    d3.json("movies.json", function(data){
+        data.forEach(function(d){
+            d.apuracao= +d.Worldwide_Gross_M;
+        });
+
+    //criando um crossfilter
+            var facts = crossfilter(data);
+
+            var anoDim = facts.dimension(function(d){
+                return d.Year;
+            });
+            var genDim = facts.dimension(function(d){
+                return d.Genre;
+            });
+
+            var totalAno = anoDim.group().reduceSum(function(d){
+                return d.Worldwide_Gross_M;
+            });
+
+            var totalGen = genDim.group().reduceSum(function(d){
+                return d.Worldwide_Gross_M;
+            });
+
+            ano.width(800)
+                     .height(400)
+                     .margins({top: 50, right: 50, bottom: 25, left: 40})
+                     .x(d3.scale.ordinal())
+                     .xUnits(dc.units.ordinal)
+                     .dimension(anoDim)
+                     .group (totalAno)
+                     .renderHorizontalGridLines(true)
+                     .legend(dc.legend().x(700).y(5).itemHeight(13).gap(5))
+                     .brushOn(false)    
+                     .group(totalAno, 'Total Ano')
+                     .ordinalColors(['steelblue']),
+
+            gen.width(800)
+                     .height(400)
+                     .margins({top: 50, right: 50, bottom: 25, left: 40})
+                     .x(d3.scale.ordinal())
+                     .xUnits(dc.units.ordinal)
+                     .dimension(genDim)
+                     .group (totalGen)
+                     .renderHorizontalGridLines(true)
+                     .legend(dc.legend().x(700).y(5).itemHeight(13).gap(5))
+                     .brushOn(false)    
+                     .group(totalGen, 'Total Genero')
+                     .ordinalColors(['darkorange']),
+
+
+            dc.renderAll();
+
+        });
+    </script>           
+</body>
+</html>
