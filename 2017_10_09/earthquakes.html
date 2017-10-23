@@ -66,16 +66,13 @@
                 d.mag = d3.round(+d.magnitude,1);
                 d.depth = d3.round (+d.depth,0);
               });
-
               //console.log(data);  
-
               // Run the data through crossfilter and load our 'facts'
               var facts = crossfilter(data);
               //Create dataTable dimension using the date (dtg)
               var dateDimension = facts.dimension(function (d){
                 return d.dtg;
               });
-
               //Create a dimension for Magnitude
               var magDimension = facts.dimension( function (d){
                 return d.mag;
@@ -83,23 +80,18 @@
               
               //Create a group for Magnitude that just counts the number of elements in the group
               var magDimensionCount = magDimension.group();
-
               // Create a dimension for Depth
               var depthDimension = facts.dimension( function (d){
                 return d.depth;
               });
-
               //Create a group for Depth that just counts the number of elements in the group
               
               var depthDimensionCount = depthDimension.group();
-
               // Create a dimension just for the hour from the datetime in the dataset
               //hint: use d3.time.hour() function
               var timeDimension = facts.dimension(function (d){
                 return d3.time.hour(d.dtg);
               });
-
-
               //Create a group for the hour dimension that just counts the number of elements per hour
               var timeDimensionCount = timeDimension.group();
               // Setup the charts
@@ -119,8 +111,6 @@
                             .gap(56)
                             .x(d3.scale.linear().domain([0,8]))
                             .elasticY(true);
-
-
               // Configure Depth bar graph
               // 480 x 150
               // x dimension domain: [0, 100]
@@ -146,9 +136,6 @@
                             .brushOn(false)
                             .x(d3.time.scale().domain(d3.extent(data, function(d) {return d.dtg;})))
                             .elasticY(true);
-
-
-
               dataTable.width(960)
                        .height(800)
                        .dimension(dateDimension)
@@ -164,7 +151,6 @@
                         function (d){ return d.long;},])
                        .sortBy(function (d) { return d.dtg;})
                        .order (d3.ascending);
-
               // Render the Charts
               dc.renderAll();
   
