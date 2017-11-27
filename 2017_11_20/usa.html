@@ -94,7 +94,7 @@ function hideTooltip() {
       .attr("fill", function(d) { return quantize(rateById.get(d.id)); })
       .attr("d", path)
       .on("click", function(d){
-      //Do something on click
+      console.log(d.id);
       })
       .on("mouseover", function(d) {
 	  d3.select(this) // seleciona o elemento atual
