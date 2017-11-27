@@ -117,21 +117,22 @@ svg.append("g")
       		.style("cursor", "pointer") //muda o mouse para mãozinha
 		.attr("stroke-width", 3)
 		.attr("stroke", "#ffff00");
-	let coordinates = [0, 0];
-	coordinates = d3.mouse(this); // obtém a posição do mouse relativa a this
-	let x = coordinates[0] + 10;
-	let y = coordinates[1] + 20; // descontando a posição do svg
+	  let coordinates = [0, 0];
+	  coordinates = d3.mouse(this); // obtém a posição do mouse relativa a this
+	  let x = coordinates[0] + 10;
+	  let y = coordinates[1] + 20; // descontando a posição do svg
+	  
 	showTooltip(d.id, x, y);
       })
       .on("mouseout", function(d){
       d3.select(this)
-      .style("cursor", "default")
-      .attr("stroke-width", 0)
-      .attr("stroke","none"); //volta ao valor padrão
-      hideTooltip();  
-
-  })
-
+        .style("cursor", "default")
+        .attr("stroke-width", 0)
+        .attr("stroke","none"); //volta ao valor padrão
+        
+	hideTooltip();  
+	})
+}
 </script>
 </body>
 </html>
