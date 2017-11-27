@@ -44,7 +44,9 @@ var width = 960,
     height = 600;
 
 var rateById = d3.map();
-
+var countyById = d3.map();
+var numFormat = new Intl.NumberFormat({style: 'percent', maximumFractionDigits: 2});
+	
 var quantize = d3.scale.quantize()
     .domain([0, .15])
     .range(colorbrewer.Blues[9]);
@@ -63,11 +65,27 @@ var svg = d3.select("#map").append("svg")
 queue()
     .defer(d3.json, "data/us.json")
     .defer(d3.tsv, "data/unemployment.tsv", function(d) { rateById.set(d.id, +d.rate); })
+    .defer(d3.csv, "data/county_names.csv", function(d) {countyById.set(d.id, d.name)})
     .await(ready);
 
 function ready(error, us) {
   if (error) throw error;
-
+	
+function showTooltip(county_id, x, y) {
+  d3.select("#tooltip")
+    .style("left", x + "px")
+    .style("top", y + "px")
+    .select("#taxa")
+      .text(numFormat.format(rateById.get(county_id)) + "%")
+  d3.select("#county")
+      .text(countyById.get(county_id));
+  d3.select("#tooltip")
+    .classed("hidden", false);    
+}
+function hideTooltip() {
+  d3.select("#tooltip")
+      .classed("hidden", true);    
+}
   svg.append("g")
       .attr("class", "counties")
     .selectAll("path")
