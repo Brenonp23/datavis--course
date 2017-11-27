@@ -28,29 +28,25 @@
 		<div id="map"></div>
 	</div>
 	<script>
-		let width = 960,
-			height = 600;
-		let rateById = d3.map();
-		let nameById = d3.map();
-		let quantize = d3.scale.quantize()
+		var width = 960,
+		var height = 600;
+		var rateById = d3.map();
+		var countynameById = d3.map();
+		var quantize = d3.scale.quantize()
 			.domain([0, .15])
 			.range(colorbrewer.Blues[9]);
-		let projection = d3.geo.albersUsa()
+		var projection = d3.geo.albersUsa()
 			.scale(1280)
 			.translate([width / 2, height / 2]);
-		let path = d3.geo.path()
+		var path = d3.geo.path()
 			.projection(projection);
-		let svg = d3.select("#map").append("svg")
+		var svg = d3.select("#map").append("svg")
 			.attr("width", width)
 			.attr("height", height);
 		queue()
 			.defer(d3.json, "data/us.json")
-			.defer(d3.csv, "data/county_names.csv", function(d) {
-				nameById.set(d.id, d.name);
-			})
-			.defer(d3.tsv, "data/unemployment.tsv", function(d) {
-				rateById.set(d.id, +d.rate);
-			})
+			.defer(d3.csv, "data/county_names.csv", function(d) {countynameById.set(d.id, d.name);})
+			.defer(d3.tsv, "data/unemployment.tsv", function(d) {rateById.set(d.id, +d.rate);})
 			.await(ready);
 		function showTooltip(county_id, x, y) {
 			d3.select("#tooltip")
@@ -60,7 +56,7 @@
 				.text((rateById.get(county_id) * 100).toFixed(2) + "%");
 			d3.select("#tooltip")
 				.select("#name")
-				.text(nameById.get(county_id));
+				.text(countynameById.get(county_id));
 			d3.select("#tooltip")
 				.classed("hidden", false);
 		}
@@ -70,6 +66,7 @@
 		}
 		function ready(error, us) {
 			if (error) throw error;
+			
 			svg.append("g")
 				.attr("class", "counties")
 				.selectAll("path")
@@ -79,12 +76,12 @@
 					return quantize(rateById.get(d.id));
 				})
 				.attr("d", path);
+			
 			svg.append("path")
-				.datum(topojson.mesh(us, us.objects.states, function(a, b) {
-					return a !== b;
-				}))
+				.datum(topojson.mesh(us, us.objects.states, function(a, b) {return a !== b;}))
 				.attr("class", "states")
 				.attr("d", path);
+			
 			svg.append("g")
 				.attr("class", "counties")
 				.selectAll("path")
@@ -94,9 +91,7 @@
 					return quantize(rateById.get(d.id));
 				})
 				.attr("d", path)
-				.on("click", function(d) {
-					console.log(d.id);
-				})
+				.on("click", function(d) {console.log(d.id);})
 				.on("mouseover", function(d) {
 					d3.select(this) // seleciona o elemento atual
 						.style("cursor", "pointer") //muda o mouse para mãozinha
@@ -106,6 +101,7 @@
 					coordinates = d3.mouse(this); // obtém a posição do mouse relativa a this
 					let x = coordinates[0] + 10;
 					let y = coordinates[1] + 20; // descontando a posição do svg
+					
 					showTooltip(d.id, x, y);
 				})
 				.on("mouseout", function(d) {
@@ -113,6 +109,7 @@
 						.style("cursor", "default")
 						.attr("stroke-width", 0)
 						.attr("stroke", "none"); //volta ao valor padrão
+					
 					hideTooltip();
 				})
 		}
