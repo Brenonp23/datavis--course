@@ -70,8 +70,6 @@ queue()
 function ready(error, us) {
   if (error) throw error;
 
-var numFormat = new Intl.NumberFormat({style: 'percent', maximumFractionDigits: 2});	
-	
 function showTooltip(county_id, x, y) {
   d3.select("#tooltip")
     .style("left", x + "px")
