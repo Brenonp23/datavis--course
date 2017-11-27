@@ -78,9 +78,11 @@ function showTooltip(county_id, x, y) {
     .style("top", y + "px")
     .select("#taxa")
     .text((rateById.get(county_id) * 100).toFixed(2) + "%");  
+	
   d3.select"#tooltip")
       .select("#name")
       .text(countynameById.get(county_id));
+	
   d3.select("#tooltip")
     .classed("hidden", false);    
 }
@@ -88,16 +90,28 @@ function hideTooltip() {
   d3.select("#tooltip")
       .classed("hidden", true);    
 }
-  svg.append("g")
+svg.append("g")
+	.attr("class", "counties")
+	.selectAll("path")
+	.data(topojson.feature(us, us.objects.counties).features)
+	.enter().append("path")
+	.attr("fill", function(d) {return quantize(rateById.get(d.id));})
+.attr("d", path);
+	
+ svg.append("path")
+      .datum(topojson.mesh(us, us.objects.states, function(a, b) { return a !== b; }))
+      .attr("class", "states")
+      .attr("d", path);
+}
+	
+svg.append("g")
       .attr("class", "counties")
     .selectAll("path")
       .data(topojson.feature(us, us.objects.counties).features)
     .enter().append("path")
       .attr("fill", function(d) { return quantize(rateById.get(d.id)); })
       .attr("d", path)
-      .on("click", function(d){
-      console.log(d.id);
-      })
+      .on("click", function(d){console.log(d.id);})
       .on("mouseover", function(d) {
 	  d3.select(this) // seleciona o elemento atual
       		.style("cursor", "pointer") //muda o mouse para mãozinha
@@ -117,12 +131,6 @@ function hideTooltip() {
       hideTooltip();  
 
   })
-
-  svg.append("path")
-      .datum(topojson.mesh(us, us.objects.states, function(a, b) { return a !== b; }))
-      .attr("class", "states")
-      .attr("d", path);
-}
 
 </script>
 </body>
