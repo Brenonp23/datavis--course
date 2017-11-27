@@ -29,6 +29,7 @@
 	</style>
 </head>
 <body>
+
 <div id="tooltip" class="hidden">
 	<h3><span id="name"></span></h3>
 	<p>Taxa de desemprego: <span id="taxa"></span></p>
@@ -77,7 +78,7 @@ function showTooltip(county_id, x, y) {
     .style("top", y + "px")
     .select("#taxa")
     .text((rateById.get(county_id) * 100).toFixed(2) + "%");  
-d3.select("#county")
+  d3.select"#tooltip"")
       .select("#name")
       .text(countynameById.get(county_id));
   d3.select("#tooltip")
