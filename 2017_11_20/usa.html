@@ -79,7 +79,7 @@ function showTooltip(county_id, x, y) {
     .select("#taxa")
     .text((rateById.get(county_id) * 100).toFixed(2) + "%");  
 	
-  d3.select"#tooltip")
+  d3.select("#tooltip")
       .select("#name")
       .text(countynameById.get(county_id));
 	
