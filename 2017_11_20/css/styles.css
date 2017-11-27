@@ -20,6 +20,15 @@ h2 span {
     width: 650px;
     height: 450px;
 }
+.counties {
+  fill: none;
+}
+
+.states {
+  fill: none;
+  stroke: #fff;
+  stroke-linejoin: round;
+}
 
 #tooltip {
 position: absolute;
