@@ -112,7 +112,9 @@ function hideTooltip() {
       .style("cursor", "default")
       .attr("stroke-width", 0)
       .attr("stroke","none"); //volta ao valor padrão
-      })
+      hideTooltip();  
+
+  })
 
   svg.append("path")
       .datum(topojson.mesh(us, us.objects.states, function(a, b) { return a !== b; }))
