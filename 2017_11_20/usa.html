@@ -56,9 +56,6 @@ queue()
     .defer(d3.csv, "data/county_names.csv", function(d) {countynameById.set(d.id, d.name)})
     .await(ready);
 
-function ready(error, us) {
-  if (error) throw error;
-
 function showTooltip(county_id, x, y) {
   d3.select("#tooltip")
     .style("left", x + "px")
@@ -76,7 +73,11 @@ function showTooltip(county_id, x, y) {
 function hideTooltip() {
   d3.select("#tooltip")
       .classed("hidden", true);    
-}
+}	
+	
+function ready(error, us) {
+  if (error) throw error;
+
 svg.append("g")
 	.attr("class", "counties")
 	.selectAll("path")
