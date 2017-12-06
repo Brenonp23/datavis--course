@@ -8,6 +8,15 @@
     <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
     <script src="js/dc.js" charset="utf-8"></script>
     <script src="https://d3js.org/queue.v1.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.2.0/dist/leaflet.css"
+   integrity="sha512-M2wvCLH6DSRazYeZRIm1JnYyh22purTM+FDB5CsyxtQJYeKq83arPe5wgbNmcFXGqiSH2XR8dT/fJISVA1r/zQ=="
+   crossorigin=""/>
+   <!-- Make sure you put this AFTER Leaflet's CSS -->
+    <script src="https://unpkg.com/leaflet@1.2.0/dist/leaflet.js"
+    integrity="sha512-lInM/apFSqyy1o6s89K4iQUKg6ppXEgsVxT35HbzUupEVRh2Eu9Wdl4tHj7dZO0s1uvplcYGmt3498TtHq+log=="
+    crossorigin=""></script>
 
     <title>Bar Chart</title>
 
@@ -17,11 +26,8 @@
             padding-top: 10px;
         }
 
-        .center {
-            width: 20%;
-            position: absolute;
-            right: 40%;
-            text-align: center;
+        .chart svg g .row text { 
+            display: none; 
         }
 
         .right {
@@ -34,24 +40,45 @@
             width: 45%;
             position: absolute;
             left: 0;
+            transform: scale(-1,1);
         }
+
+        .left text {
+            transform: scale(-1,1);
+        }
+
     </style>
 </head>
 <body>
 <h1>Two sided horiztontal bar chart</h1>
+
+<div id="worldMap" class="chart" style="height: 500px; width: 850px;"></div>
+
+<div id="grossReligionChart" class="chart"></div>
+<button id="butt">aplica filtro</button>
+
+<div id="religionsChart" class="chart"></div>
 
 <div id="grossChart" class="chart left"></div>
 
 <div id="hdiChart" class="chart right"></div>
 
 <script type="text/javascript">
-var percentsByCountry = d3.map();
+var dataByCountry = d3.map();
 var grossByCountry = d3.map();
+var locByCountry = d3.map();
 
 var facts;
+
 var movieDim;
+var countryDim;
+var countriesFG;
+var religionDim;
+
 var all;
-var treated_data;
+var treated_data = [];
+var religion_amt = 8;
+var max_entries;
 
 //Create a quantize color scale here
 // Consider that the unemployment rate goes from 0 to 15% (.15)
@@ -60,22 +87,22 @@ var treated_data;
 var chartHdi = dc.rowChart("#hdiChart");
 var chartGross = dc.rowChart("#grossChart");
 
+var religionsChart = dc.pieChart("#religionsChart");
+
+//var worldMap = dc.geoChoroplethChart('#wordMap');
+
+var chartGrossReligion = dc.scatterPlot("#grossReligionChart");
+
+var movieGrossReligionGroup;
+
+var countryHdiGrossGroup;
+
 queue()
     // .defer(d3.tsv, "data/2016_general.csv")
     
     .defer(d3.tsv, 'data/2016_foreign.csv') 
-    //   function(d) {
-    //   var ctr = d.Country
-    //   if (!grossByCountry.has(d.Title)){
-    //     grossByCountry.set(d.Title, {ctr: parseFloat(d.Total_Gross)})
-    //   }
-
-    //   else 
-    //     grossByCountry.get(d.Title)[d.Country] = parseFloat(d.Total_Gross)
-   
-    // })
     .defer(d3.tsv, "data/2016_countries.csv", 
-      function(d) { percentsByCountry.set(d.Name, {chr: parseFloat(d.ChristianPercent),
+      function(d) { dataByCountry.set(d.Name, {chr: parseFloat(d.ChristianPercent),
                                                    mus: parseFloat(d.MuslimPercent),
                                                    ath: parseFloat(d.AtheistPercent),
                                                    hin: parseFloat(d.HinduPercent),
@@ -83,234 +110,328 @@ queue()
                                                    flk: parseFloat(d.FolkReligionPercent),
                                                    oth: parseFloat(d.OtherPercent),
                                                    jew: parseFloat(d.JewishPercent),
-                                                   hdi: parseFloat(d.HDI)
+                                                   hdi: parseFloat(d.HDI),
+                                                   population: +d.Population
                                                }
                                               );})
+    .defer(d3.tsv, "data/countries.tsv", function(d) {
+        locByCountry.set(d.name, {lat: d.lat, long: d.long})
+    })
     .await(ready);
 
 function ready(error, data) {
-
     data.forEach(function(d) {
-        var country_info = percentsByCountry.get(d.Country);
+        var country_info = dataByCountry.get(d.Country);
+                
+        var religions_names = Object.keys(country_info);
+        var religions_values = Object.values(country_info);
 
-        d.hdi = country_info.hdi;
+        var index = religions_names.indexOf("hdi");
 
-        /*var religions_names = Object.keys(religions);
-        var religions_values = Object.values(religions);
+        religions_names.splice(index, 1);
+        religions_values.splice(index, 1);
 
+        index = religions_names.indexOf("population");
+
+        religions_names.splice(index, 1);        
+        religions_values.splice(index, 1);
+        
         for(var i=0; i<religions_names.length; i++) {
             var tuple = Object.assign({}, d);
-
+            
             tuple.religion = religions_names[i];
             tuple.religion_value = religions_values[i];
-            tuple.religion_gross = religions_values[i]*d.Total_Gross;
-
+            tuple.hdi = country_info.hdi;
+            tuple.population = country_info.population;
+            
             treated_data.push(tuple);
-            // console.log(tuple)
-        }*/
+        }
     });
 
-    facts = crossfilter(data);
+    facts = crossfilter(treated_data);
+
     all = facts.groupAll();
+    max_entries = all.value();
+
+    //---------- Dimensions ---------------------------------
 
     movieDim = facts.dimension(function(d) {
         return d.Title;
     });
 
-    console.log(movieDim.top(Infinity));
-
-    /*hdiDim = facts.dimension(function(d) {
-        return d.hdi;
-    });
-
-    hdiGroup = hdiDim.group();*/
-
-    var countryDim = facts.dimension(function(d) {
+    countryDim = facts.dimension(function(d) {
         return d.Country;
     })
 
+    religionDim = facts.dimension(function(d) {
+        return d.religion;
+    })
+
+    console.log(movieDim.top(Infinity));
+
+    //--------- Groups and Charts --------------------------------------
+
+    // Rowchart: 
+
     var countryHdiMax = countryDim.group().reduceCount().top(1)[0].value;
-    var countryAmt = countryDim.group().reduceCount().top(Infinity).length;
+    var totalCountryAmt = countryDim.group().reduceCount().top(Infinity).length;
+    var countryAmt;
 
-    var countryHdiGroup = countryDim.group().reduceSum(function(d) {
-        return d.hdi;
+    countryHdiGrossGroup = countryDim.group().reduce(function(n, d) {
+        n.Total_Gross += parseFloat(d.Total_Gross);
+        n.hdi += parseFloat(d.hdi);
+        return n;
+    }, function(n, d) {
+        n.Total_Gross -= parseFloat(d.Total_Gross);
+        n.hdi -= parseFloat(d.hdi);
+        return n;
+    }, function(){
+        return {Total_Gross: 0, hdi: 0};
     });
 
-    countryHdiGroup.top(Infinity).forEach(function(d) {
-        d.value = (d.value / countryHdiMax).toFixed(2);
+    countryHdiGrossGroup.top(Infinity).forEach(function(d) {
+        d.value.hdi = parseFloat((d.value.hdi / countryHdiMax).toFixed(2));
+        //uncomment bellow for test with religions:
+        d.value.Total_Gross = parseFloat((d.value.Total_Gross / religion_amt).toFixed(2));
     });
-
-    var countryGrossGroup = countryDim.group().reduceSum(function(d) {
-        return d.Total_Gross;
-    });
-
-    //var order = countryGrossGroup.top(Infinity).forEach();
-
-    chartHdi
-        .dimension(countryDim)
-        .group(countryHdiGroup)
-        .data(function(group) {return group.top(Infinity);})
-        .height(countryAmt * 20)
-        .gap(10)
-        .render();
 
     chartGross
         .dimension(countryDim)
-        .group(countryGrossGroup)
-        .data(function(group) {return group.top(Infinity);})
+        .group(countryHdiGrossGroup)
+        .data(function(group) {
+            var top_10 = group.order(function(d) {return d.Total_Gross;}).top(10);
+            countryAmt = top_10.length;
+            return top_10;
+        })
+        .valueAccessor(function(d) {return d.value.Total_Gross})
         .height(countryAmt * 20)
-        .gap(10)
-        .render();
+        .gap(10);
 
-  // var countryDim = facts.dimension(function(d) {
-  //     return d.Country;
-  // })
+    chartHdi
+        .dimension(countryDim)
+        .group(countryHdiGrossGroup)
+        .data(function(group) {return group.order(function(d) {return d.Total_Gross;}).top(10);})
+        .valueAccessor(function(d) {return d.value.hdi})
+        .height(countryAmt * 20)
+        .gap(10);
 
-  // var countryGroup = movieDim.group().reduceSum(function(d) {
-  //   return parseFloat(d.Total_Gross);
-  // });
 
-  // var movieGroup = countryDim.group().reduceSum(function(d) {
-  //   return parseFloat(d.Total_Gross);
-  // });
+    // World Map:
 
-  // console.log(countryGroup.top(4));
-  // console.log(movieGroup.top(4));
+    var map = L.map('worldMap');
+    countriesFG = new L.FeatureGroup();
 
-  // moviesRowChart.width(500)
-  //   .height(500)
-  //   .dimension(movieDim)
-  //   .group(countryGroup)
+    map.setView([40, 10],1);
+    mapLink = '<a href="http://openstreetmap.org">OpenStreetMap</a>';
+    L.tileLayer(
+        'http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; ' + mapLink + ' Contributors',
+            maxZoom: 15,
+        }).addTo(map);
 
-  // countriesRowChart.width(500)
-  //   .height(500)
-  //   .dimension(countryDim)
-  //   .group(movieGroup)
-  //       // .columns([
-  //       //   function(d){return d.Title},
-  //       //   function(d){return d.Total_Gross}
-  //       // ])
-  //       // .sortBy(function(d) {return d.Total_Gross})
-  //       // .order(d3.descending)
+    chartGrossReligion.on('renderlet', function (data) {
+        countriesFG.clearLayers();
+        console.log(data)
+        countryDim.top(Infinity).forEach(function (d,i,grou) {
+            var loc = locByCountry.get(d.Country);
+            if (loc == undefined)
+                console.log(d.Country)
+            var name = d.Country;
+            var marker = L.marker([loc.lat, loc.long]);
+            marker.bindPopup("<p>" + name + "</p>");
+            countriesFG.addLayer(marker);
+        });
+        map.addLayer(countriesFG);
+        map.fitBounds(countriesFG.getBounds());
+    });
 
-  //   // Render the Charts
-  // dc.renderAll();
+    console.log(countryDim.top(Infinity))
 
+    // Piechart:
+
+
+    // Scatterplot:
+
+    movieGrossReligionGroup = movieDim.group().reduce(function(n, d) {
+        if(n.coords == undefined) {
+            n.coords = [0, 0];
+        } else {
+
+        //     if(n.coords.length == 2) {
+                n.coords[0] += parseFloat(d.Total_Gross);
+                n.coords[1] += parseFloat(d.religion_value) * parseFloat(d.Total_Gross) / 100;
+        //     } else {
+        //         n.coords.push(parseFloat(d.Total_Gross));
+        //         n.coords.push(parseFloat(d.religion_value) * parseFloat(d.Total_Gross) / 100);
+        //     }
+        }
+
+        return n;
+    }, function(n, d) {
+        if(n.coords == undefined) {
+            n.coords = [0, 0];
+        } else {
+            n.coords[0] += parseFloat(d.Total_Gross);
+            n.coords[1] -= parseFloat(d.religion_value) * parseFloat(d.Total_Gross) / 100;
+        }
+
+        return n;
+    }, function(){
+        return {coords: [0,0]};
+    });
+
+    // console.log(movieGrossReligionGroup.top(Infinity));
+
+    // console.log(totalCountryAmt);
+
+    movieGrossReligionGroup.top(Infinity).forEach(function(d, i, group) {
+        var coords = d.value.coords;
+
+        coords[0] = parseFloat(coords[0] / religion_amt).toFixed(2);
+        coords[1] = parseFloat(coords[1]).toFixed(2);
+
+        d.value = d.key;
+        d.key = coords;
+        d.max_religion_gross = coords[1];
+    });
+
+    chartGrossReligion
+        .width(768)
+        .height(480)
+        .x(d3.scale.linear().domain([0.0,1200.0]))
+        .y(d3.scale.linear().domain([0.0,1200.0]))
+        .brushOn(false)
+        //.symbolSize(8)
+        //.clipPadding(10)
+        //.yAxisLabel("This is the Y Axis!")
+        .dimension(movieDim)
+        .group(movieGrossReligionGroup);
+
+    var religionGroup = religionDim.group().reduceSum(function(d) {        
+        return d.religion_value;
+    });
+    
+    religionGroup.top(Infinity).forEach(function(d){
+        d.value = (d.value / (max_entries / religion_amt)).toFixed(2);
+    });
+
+    religionsChart
+        .width(360)
+            .height(280)
+            .slicesCap(5)
+            .innerRadius(80)
+            .dimension(religionDim)
+            .group(religionGroup)
+            .colors(d3.scale.ordinal().domain(["chr", "mus", "ath", "bud", "oth", "hin", "flk", "jew"])
+                                    .range(["#3366ff", "#00ff99", "#ff6699", "#ffcc99", "#9966ff", "#ccff99", "#ff4d4d", "#c2c2a3"]));
+
+    religionsChart.filterHandler(function(dimension, filter_array){
+        function pre_filter(callback) {
+            movieGrossReligionGroup.top(Infinity).forEach(function(d, i, group) {
+                var coords = d.key;
+
+                d.key = d.value;
+                d.value = coords;
+
+                if(i === group.length - 1) {
+                    dimension.filter(function(f) { 
+                        return f == filter_array[filter_array.length - 1];
+                    });
+
+                    callback();
+                }
+            });
+        }
+
+        pre_filter(function() {
+            movieGrossReligionGroup.top(Infinity).forEach(function(d, i, group) {
+                var coords = d.value.coords;
+
+                coords[0] = parseFloat(coords[0] / (religion_amt * (1 - all.value() / max_entries))).toFixed(2);
+                coords[1] = (parseFloat(coords[1]) + parseFloat(d.max_religion_gross)).toFixed(2);
+
+                d.value = d.key;
+                d.key = coords;
+
+                if(i === group.length - 1) {
+                   return filter_array; 
+                }
+            });
+        });        
+    });
+
+    dc.renderAll();
 }
 
-    /*var labelArea = 160;
-    var chart,
-            width = 400,
-            bar_height = 20,
-            height = bar_height * 200;
-    var rightOffset = width + labelArea;
+//-------------------- ready ends here -----------------------------------------
+var click = false;
 
-    var lCol = "infant.mortality";
-    var rCol = "gdp";
-    var xFrom = d3.scale.linear()
-            .range([0, width]);
-    var xTo = d3.scale.linear()
-            .range([0, width]);
-    var y = d3.scale.ordinal()
-            .rangeBands([20, height]);
+$(document).ready(function() {
+    $("#butt").click(function() {
 
-    function render(data) {
-        var chart = d3.select("body")
-                .append('svg')
-                .attr('class', 'chart')
-                .attr('width', labelArea + width + width)
-                .attr('height', height);
+        var filtered_amt;
 
-        xFrom.domain(d3.extent(data, function (d) {
-            return d[lCol];
-        }));
-        xTo.domain(d3.extent(data, function (d) {
-            return d[rCol];
-        }));
+        function f1(callback) {
+            movieGrossReligionGroup.top(Infinity).forEach(function(d, i, group) {
+                var coords = d.key;
 
-        y.domain(data.map(function (d) {
-            return d.countries;
-        }));
+                d.key = d.value;
+                d.value = coords;
 
-        var yPosByIndex = function (d) {
-            return y(d.countries);
-        };
-        chart.selectAll("rect.left")
-                .data(data)
-                .enter().append("rect")
-                .attr("x", function (d) {
-                    return width - xFrom(d[lCol]);
-                })
-                .attr("y", yPosByIndex)
-                .attr("class", "left")
-                .attr("width", function (d) {
-                    return xFrom(d[lCol]);
-                })
-                .attr("height", y.rangeBand());
-        chart.selectAll("text.leftscore")
-                .data(data)
-                .enter().append("text")
-                .attr("x", function (d) {
-                    return width - xFrom(d[lCol])-40;
-                })
-                .attr("y", function (d) {
-                    return y(d.countries) + y.rangeBand() / 2;
-                })
-                .attr("dx", "20")
-                .attr("dy", ".36em")
-                .attr("text-anchor", "end")
-                .attr('class', 'leftscore')
-                .text(function(d){return d[lCol];});
-        chart.selectAll("text.name")
-                .data(data)
-                .enter().append("text")
-                .attr("x", (labelArea / 2) + width)
-                .attr("y", function (d) {
-                    return y(d.countries) + y.rangeBand() / 2;
-                })
-                .attr("dy", ".20em")
-                .attr("text-anchor", "middle")
-                .attr('class', 'name')
-                .text(function(d){return d.countries;});
+                if(i === group.length - 1) {
+                    if(!click) {
+                        console.log("oi");
+                        religionDim.filter(function(d) {return d=='chr'});
+                        filtered_amt = all.value();
+                    } else {
+                        console.log("ola");
+                        religionDim.filter(function(d) {return true});
+                        filtered_amt = all.value(); 
+                        // facts.remove();
+                        // facts.add(countryDim);
+                        // facts.add(movieDim);
+                        // facts.add(religionDim);
+                    }
 
-        chart.selectAll("rect.right")
-                .data(data)
-                .enter().append("rect")
-                .attr("x", rightOffset)
-                .attr("y", yPosByIndex)
-                .attr("class", "right")
-                .attr("width", function (d) {
-                    return xTo(d[rCol]);
-                })
-                .attr("height", y.rangeBand());
-        chart.selectAll("text.score")
-                .data(data)
-                .enter().append("text")
-                .attr("x", function (d) {
-                    return xTo(d[rCol]) + rightOffset+40;
-                })
-                .attr("y", function (d) {
-                    return y(d.countries) + y.rangeBand() / 2;
-                })
-                .attr("dx", -5)
-                .attr("dy", ".36em")
-                .attr("text-anchor", "end")
-                .attr('class', 'score')
-                .text(function(d){return d[rCol];});
-        chart.append("text").attr("x",width/3).attr("y", 10).attr("class","title").text("Infant Mortality");
-        chart.append("text").attr("x",width/3+rightOffset).attr("y", 10).attr("class","title").text("GDP");
-        chart.append("text").attr("x",width+labelArea/3).attr("y", 10).attr("class","title").text("Countries");
+                    click=!click;
 
+                    callback();
+                }
+            });
+            console.log(countryDim.top(Infinity))
+        }
 
-    }
+        f1(function() {
+            movieGrossReligionGroup.top(Infinity).forEach(function(d, i, group) {
+                var coords = d.value.coords;
 
-    function type(d) {
-        d["gdp"] = +d["gdp"];
-        d["infant.mortality"] = +d["infant.mortality"];
-        return d;
-    }
+                coords[0] = parseFloat(coords[0] / (religion_amt * (1 - filtered_amt / max_entries))).toFixed(2);
+                coords[1] = (parseFloat(coords[1]) + parseFloat(d.max_religion_gross)).toFixed(2);
 
-    d3.csv("https://gist.githubusercontent.com/kaijiezhou/b0a1959aad60346f806a/raw/80b02e59b380ca5f86a841fb6066bc9cd147ff51/UN.csv", type, render);*/
+                if(d.filtered_coords != undefined) {
+                    coords[0] = parseFloat(coords[0]) + parseFloat(d.filtered_coords[0]);
+                    coords[1] = parseFloat(coords[1]) + parseFloat(d.filtered_coords[1]);
+                }
+
+                d.filtered_coords = coords;
+
+                d.value = d.key;
+                d.key = coords;
+
+                if(i === group.length - 1) {
+                    console.log((1 - filtered_amt / max_entries))
+                    console.log(max_entries);
+                    console.log(all.value());
+                    console.log(movieGrossReligionGroup.top(Infinity));
+
+                    dc.redrawAll();
+                }
+            });
+        });        
+    })
+    
+})
+
 </script>
 </body>
 </html>
