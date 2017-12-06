@@ -79,6 +79,7 @@ var all;
 var treated_data = [];
 var religion_amt = 8;
 var max_entries;
+var country_names =[];
 
 //Create a quantize color scale here
 // Consider that the unemployment rate goes from 0 to 15% (.15)
@@ -201,6 +202,9 @@ function ready(error, data) {
         .data(function(group) {
             var top_10 = group.order(function(d) {return d.Total_Gross;}).top(10);
             countryAmt = top_10.length;
+            for (i=0;i<countryAmt; i++){
+                country_names[i]=top_10[i].key;
+            }
             return top_10;
         })
         .valueAccessor(function(d) {return d.value.Total_Gross})
